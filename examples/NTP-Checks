@@ -1,3 +1,4 @@
+/** Contact: Rich Cariddi - rcariddi@gmail.com **/
 /** Import NTP_HOSTS [ ]; **/
 /** I use this for creating a standards file, and putting NTP in one location, then exporting that to the main query **/
 /** However, you can just define the "NTP_HOSTS" List locally if you are not referrencing it other checks **/
@@ -112,7 +113,7 @@ select {
                                 else if IP.Model == OS.NXOS
                                      then IP.CiscoRunningConfNXOS
                                      else NO_MATCH,
-  ADP_Standard: if IP.Model == OS.ARISTA_EOS
+  A_Standard: if IP.Model == OS.ARISTA_EOS
                 then IP.AristaFix
                 else if IP.Model == OS.IOS_XE
                      then IP.CiscoRunningConfIOSXE
