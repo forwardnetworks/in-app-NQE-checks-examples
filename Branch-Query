@@ -1,4 +1,4 @@
-/**
+/** Contact Rich Cariddi rcariddi@gmail.com for questions
  * @intent DEMO Inventory and check LDoS, Assign Replacment and Price
  * @description Define Software Versions in a single location to be used in checks **/
 // WS-C3560-24TS doesn't show up, 6504 doesn't show up and Arista Device doesn't show up, can't figure why//
