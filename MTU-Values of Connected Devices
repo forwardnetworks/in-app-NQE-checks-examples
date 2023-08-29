@@ -1,4 +1,4 @@
-/**
+/** Contact Rich Cariddi rcariddi@gmail.com for questions
  * @intent Return the MTU of interfaces that contain a CDP or LLDP neighbor 
  * @description Find All links of CDP/LLDP, make sure each side of the link matches. This allows us to ignore non infrastructure links
  * If we want all values, remove the line: where isPresent(interface1.cdp) || isPresent(interface1.lldp)
