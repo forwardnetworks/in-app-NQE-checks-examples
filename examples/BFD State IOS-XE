@@ -1,0 +1,41 @@
+/** Contact Rich Cariddi for Questions: rcariddi@gmail.com
+* @intent BFD State
+* @description Add Command 'show bfd neighbors || peers' and report status
+* Going to have to create separite checks and combine in 
+**/
+
+
+iosXE_BFDPattern =  ```
+{ip:ipv4Address} {LD:string} {RD:string} {State:string} {Int1:string}
+```;
+
+IOSXE_BFD = 
+foreach Device in network.devices
+let Platform = Device.platform
+where Platform.os == OS.IOS_XE
+let Outputs = Device.outputs
+foreach Command in Outputs.commands
+where Command.commandText == "show bfd neighbors"
+let parsed = parseConfigBlocks(OS.IOS_XE, Command.response)    //parses text into lines
+let matchData = blockMatches_alpha1(parsed, iosXE_BFDPattern) //applies pattern to lines
+
+foreach x in matchData
+select{
+  name:Device.name,
+  model:Platform.os,
+  IP:x.data.ip,
+  Intf:x.data.Int1,
+  State:x.data.State
+  };
+//
+//Combine Functions
+  osList = IOSXE_BFD;
+//
+foreach result in osList
+select{
+  Hostname:result.name,
+  Model:result.model,
+  Neighbor:result.IP,
+  Intf:result.Intf,
+  State:result.State
+  }
