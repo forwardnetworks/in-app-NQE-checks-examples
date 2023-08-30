@@ -1,0 +1,40 @@
+/** contact Rich Cariddi for any questions: rcariddi@gmail.com 
+* @intent BFD State Arista
+* @description Add Command 'show bfd neighbors || peers' and report status
+* Going to have to create separite checks b/c the output isn't consistent
+**/
+
+EOS_BFDPattern =  ```
+{DstAddr:ipv4Address} {MyDisc:number} {YourDisc:string} {Interface:string} {Type:string} {LastUp:string} {LastDown:string} {LastDiag:string} {State1:string} {State2:string} {State3:string} {State4:string} 
+```;
+
+Arista_BFD = 
+foreach Device in network.devices
+let Platform = Device.platform
+where Platform.os == OS.ARISTA_EOS
+let Outputs = Device.outputs
+foreach Command in Outputs.commands
+where Command.commandText == "show bfd peers"
+let parsed = parseConfigBlocks(OS.ARISTA_EOS, Command.response)
+let matchData = blockMatches_alpha1(parsed, EOS_BFDPattern) 
+
+foreach x in matchData
+select{
+  name:Device.name,
+  model:Platform.os,
+  IP:x.data.DstAddr,
+  Intf:x.data.Interface,
+  State:x.data.State4};
+
+//
+//Combine Functions
+  osList = Arista_BFD;
+//
+foreach result in osList
+select{
+  Hostname:result.name,
+  Model:result.model,
+  Neighbor:result.IP,
+  Intf:result.Intf,
+  State:result.State
+  }
