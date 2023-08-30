@@ -1,0 +1,35 @@
+/** Contact Rich Cariddi rcariddi@gmail.com for questions
+ * @intent Return the MTU of interfaces that contain a CDP or LLDP neighbor 
+ * @description Find All links of CDP/LLDP, make sure each side of the link matches. This allows us to ignore non infrastructure links
+ * If we want all values, remove the line: where isPresent(interface1.cdp) || isPresent(interface1.lldp)
+ **/
+
+foreach device1 in network.devices
+foreach Tag in device1.tagNames
+where Tag == "DC"
+foreach interface1 in device1.interfaces
+// IGNORE Mgmt interfaces or Bond0
+where interface1.name != "Ma1" && interface1.name != "ma1" &&
+      interface1.name != "mgmt0"
+where isPresent(interface1.cdp) || isPresent(interface1.lldp)
+foreach link in interface1.links
+// Limit to avoid considering each link twice
+// Compare 2 strings (ascii) device.name link.deviceName d1.name < link.deviceName --> it's already been considered
+where device1.name < link.deviceName ||
+      device1.name == link.deviceName && interface1.name < link.ifaceName
+foreach device2 in network.devices
+where device2.name == link.deviceName
+foreach interface2 in device2.interfaces
+// IGNORE Mgmt interfaces or Bond0
+where interface2.name != "Ma1" && interface2.name !="ma" && interface2.name != "bond0" &&
+      interface2.name == link.ifaceName
+select {
+  violation: interface1.mtu != interface2.mtu,
+  Device1: device1.name,
+  Interface1: interface1.name,
+  Mtu1: interface1.mtu,
+  Device2: device2.name,
+  Interface2: interface2.name,
+  Mtu2: interface2.mtu,
+  Tag: device1.tagNames,
+}
