@@ -1,0 +1,56 @@
+/** import "/Network Standards/01_NetworkVars/99_Support"; **/
+/** ========================================================================================================================= **/
+/** ========================================================================================================================= **/
+/**  ===============    Create a CSV Vile with following Fields. Add all Models you wanted reported on   ===================== **/
+/** Create a folder "xyz/Network Standards/01_NetworkVars/99_Support" and add the following CSV file/formt  **/
+export deviceSupport =
+  """csv
+Vendor,Model,HW_LDoS,LCM,HW_Compliance,SW_N,SW_N1,SW_N2,Vendor_Rec,Owner,Contact,Replacement,Cost
+Arista,DCS-7010T-48-R,TBA,Supported,HW-Compliant,4.28.3M,4.24.6M,4.23.x,4.28.3M,CN-DataCenter,Cariddi,TBD,10000
+""";
+
+/** Main query **/
+/**
+ * @intent DEMO Pull Vendor/Platform/Model
+ * @description Define Software Versions in a single location to be used in checks **/
+/** Use following statement to import OS List **/
+
+import "xyz/Network Standards/01_NetworkVars/99_Support";
+
+foreach Device in network.devices
+//foreach Tag in Device.tagNames where Tag == "Branch"
+//foreach Tag in Device.tagNames where Tag == "Cisco" || Tag =="Arista"
+let PLATFORM = Device.platform
+foreach Component in PLATFORM.components
+// Multiple Matching Types, b/c Cisco Sucks // 
+where Component.partType == DevicePartType.STACK 
+|| Component.partType == DevicePartType.STACK_SWITCH 
+|| Component.partType == DevicePartType.CHASSIS
+|| Component.name == "Switch System"
+|| Component.name == "System Chassis"
+
+foreach entry in deviceSupport
+where entry.Model == PLATFORM.model
+let LDOS = entry.HW_LDoS
+let comma = ", "
+let ApprovedSW = entry.SW_N + comma + entry.SW_N1 + comma + entry.SW_N2
+let contact = entry.Contact
+let SiteCode = prefix(Device.name,4)
+select {
+  Hostname: Device.name,
+  Location: Device.locationName,
+  Vendor: PLATFORM.vendor,
+  Compliance:entry.HW_Compliance,
+  Model:PLATFORM.model,
+  HW_LDoS:LDOS,
+  SW_Recommended:ApprovedSW,
+  osVersion: PLATFORM.osVersion,  
+  tag:Device.tagNames,
+  SiteCode:SiteCode,
+  serialNumber: Component.serialNumber,
+  managementIps: PLATFORM.managementIps,
+  componentName: Component.name,
+  os: PLATFORM.os,
+  contact:contact
+//   violation: PLATFORM.os not in ApprovedSW
+}
