@@ -1,0 +1,69 @@
+/**
+* @intent Check DNS IP's accross network devices
+* @description RJC 1/15/2023 -  * Ahmed K 3/15/2023 - to remove duplicates and combine IP's into single Row, check for VRF instances etc...
+for questions - rcariddi@gmail.com
+**/
+/** Define Host List **/
+AAA_HOSTS = ["10.10.10.21", "10.11.10.21"];
+
+/** Define Patterns for Different Vendor/Platforms **/
+ARISTA_EOS_CONF =
+```
+tacacs-server host {"vrf" string IP1:string+ | IP1:string+}
+```;
+//ip dns source-interface Loopback0 ip domain-name net.xyz.com
+CISCO_IOS_XE_CONF = ```
+tacacs-server host {"vrf" string IP1:string+ | IP1:string+}
+```;
+/** ip domain-name net.adp.com  ip domain-lookup //ip dns source-interface Loopback0 **/
+CISCO_NXOS_CONF = 
+```
+tacacs-server host  {IP1:string+ | IP1:string+ } ("use-vrf" string)*
+```;
+/** **/
+UNKNOWN_CONF = ```
+ip name-server {IP1:string+ | IP1:string+} ("vrf" string)*
+```;
+
+//**********************************************************************************
+match_this(config, pattern) =
+foreach Match in blockMatches_alpha1(config, pattern)
+let matches = if isPresent(Match.data.left) then Match.data.left else Match.data.right
+let x = (foreach y in matches select y.IP1)
+select x;
+foreach Device in network.devices
+foreach Tag in Device.tagNames where Tag == "Network"
+let SiteCode = prefix(Device.name,4)
+let Platform = Device.platform
+let os = Platform.os
+let os = if os in [OS.ARISTA_EOS, OS.IOS_XR, OS.IOS_XE, OS.NXOS] then os else OS.UNKNOWN
+let PATTERN = if os == OS.ARISTA_EOS
+              then ARISTA_EOS_CONF
+              else if os == OS.IOS_XE
+                   then CISCO_IOS_XE_CONF
+                   else if os == OS.NXOS then CISCO_NXOS_CONF 
+			else UNKNOWN_CONF
+foreach Command in Device.outputs.commands
+where Command.commandType == CommandType.CONFIG
+let CONFIG = parseConfigBlocks(os, Command.response)
+let result = match_this(CONFIG, PATTERN)
+// let ips = join(",", result)
+let result = (foreach x in result foreach y in x select y)
+let match = length(result)
+
+let diff_aaa = (foreach ip in result where ip not in AAA_HOSTS select ip)
+let diff_ip_aaa = (foreach ip in AAA_HOSTS where ip not in result select ip)
+
+let violation = match != 2 || length(diff_aaa) > 0 || length(diff_ip_aaa) > 0
+
+select {
+ violation: violation,
+  Device: Device.name,
+  ADP_AAA_IPs: AAA_HOSTS,
+  Confgured_IPs: result,
+  match:length(result),
+  Location: Device.locationName,
+  Platform: os,
+  SiteCode:SiteCode,
+  Tag: Device.tagNames
+}
